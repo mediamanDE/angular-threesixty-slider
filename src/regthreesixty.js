@@ -19,7 +19,9 @@ angular.module('reg.threesixty', [])
         speedMultiplier: '=',
         requiredMovementXinit: '=',
         requiredMovementXcont: '=',
-        triggerMultiplier: '='
+        triggerMultiplier: '=',
+        scrollLock: '=',
+        scrollSwipe: '='
       },
       link: function(scope, element, attrs) {
 
@@ -51,6 +53,11 @@ angular.module('reg.threesixty', [])
         var scrollTimer;
 
         /**
+         * whether swiping through slides should be possible while scrolling
+         */
+        var scrollSwipe = scope.scrollSwipe === undefined ? true : Boolean(scope.scrollSwipe);
+
+          /**
          * required movement on the X axis to start swiping
          */
         var requiredMovementXinit = scope.requiredMovementXinit ? parseInt(scope.requiredMovementXinit) : 6;
@@ -98,7 +105,9 @@ angular.module('reg.threesixty', [])
             }
         };
 
-        $document.on('touchmove scroll', updateOffset);
+        if (scope.scrollLock) {
+          $document.on('touchmove scroll', updateOffset);
+        }
 
         var load360Images = function(){
 
@@ -241,7 +250,7 @@ angular.module('reg.threesixty', [])
         }
 
         function trackPointer(event){
-          if (ready && dragging && !scrolling) {
+          if (ready && dragging && (!scope.scrollLock || !scrolling)) {
 
             var pointerEvent = getPointerEvent(event);
 
@@ -262,8 +271,11 @@ angular.module('reg.threesixty', [])
 
                   if (initialDrag) {
                     initialDrag = false;
-                    body.style.top = -Math.abs(scrollY) + 'px';
-                    bodyClasses.add('no-scroll');
+
+                    if (scope.scrollLock) {
+                      body.style.top = -Math.abs(scrollY) + 'px';
+                      bodyClasses.add('no-scroll');
+                    }
                   }
 
                   var rawDiff = (totalFrames - 1) * speedMultiplier * (pointerDistance / element[0].clientWidth);
@@ -277,7 +289,7 @@ angular.module('reg.threesixty', [])
                   endFrame = currentFrame + (direction * frameDiff);
 
                   refresh();
-              } else if (initialDrag && xDistanceAbs * 5 < pointerDistanceY) {
+              } else if (!scrollSwipe && (initialDrag && xDistanceAbs * triggerMultiplier < pointerDistanceY)) {
                 dragging = false;
               }
 
@@ -292,10 +304,12 @@ angular.module('reg.threesixty', [])
           element.off('touchmove mousemove', mousemove);
           element.off('touchend mouseup', mouseup);
 
-          bodyClasses.remove('no-scroll');
-          if (!initialDrag) {
-            $window.scroll(0, Math.abs(parseInt(body.style.top)));
-            body.style.top = null;
+          if (scope.scrollLock) {
+            bodyClasses.remove('no-scroll');
+            if (!initialDrag) {
+              $window.scroll(0, Math.abs(parseInt(body.style.top)));
+              body.style.top = null;
+            }
           }
 
           dragging = false;
