@@ -57,7 +57,7 @@ angular.module('reg.threesixty', [])
          */
         var scrollSwipe = scope.scrollSwipe === undefined ? true : Boolean(scope.scrollSwipe);
 
-          /**
+        /**
          * required movement on the X axis to start swiping
          */
         var requiredMovementXinit = scope.requiredMovementXinit ? parseInt(scope.requiredMovementXinit) : 6;
