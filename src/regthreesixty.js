@@ -74,10 +74,7 @@ angular.module('reg.threesixty', [])
 
         var adjustHeight = function(){
           if( loadedImages > 0 ){
-            var elementW = element[0].offsetWidth;
-            var imageW = frames[0].width;
-            var h = frames[0].naturalHeight * ( elementW / imageW );
-            element.css( 'height' , h + 'px' );
+            element.css( 'height' , (frames[0].offsetHeight || frames[0].naturalHeight) + 'px' );
           }
         };
 
