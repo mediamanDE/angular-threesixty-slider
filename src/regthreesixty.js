@@ -137,9 +137,9 @@ angular.module('reg.threesixty', [])
           loadedImages ++;
           var firstImage = frames[0];
           firstImage.className = 'current';
-          adjustHeight();
           element.append( firstImage );
           element.removeClass('loading-first');
+          adjustHeight();
           load360Images();
         };
 
