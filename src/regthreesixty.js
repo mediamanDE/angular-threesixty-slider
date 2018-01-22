@@ -139,7 +139,9 @@ angular.module('reg.threesixty', [])
           firstImage.className = 'current';
           element.append( firstImage );
           element.removeClass('loading-first');
-          adjustHeight();
+          $timeout(function() {
+            adjustHeight();
+          }, 50);
           load360Images();
         };
 
