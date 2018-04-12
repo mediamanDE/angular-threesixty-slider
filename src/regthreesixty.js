@@ -42,7 +42,7 @@ angular.module('reg.threesixty', [])
 
         var adjustHeight = function () {
           if (loadedImages > 0) {
-            var h = frames[0][0].clientHeight;
+            var h = frames[0][0].getElementsByTagName('img')[0].clientHeight;
             element.css('height', h + 'px');
           }
         };
@@ -76,7 +76,6 @@ angular.module('reg.threesixty', [])
           var imageW = childImg.naturalWidth;
           var h = childImg.naturalHeight * ( elementW / imageW );
 
-          angular.element(parent).css('width', elementW + 'px');
           angular.element(parent).css('height', h + 'px');
         };
 
@@ -112,8 +111,8 @@ angular.module('reg.threesixty', [])
           var firstImage = frames[0];
           angular.element(firstImage).addClass('current');
           element.append(firstImage);
-          adjustHeight();
           element.removeClass('loading-first');
+          adjustHeight();
           load360Images();
         };
 
