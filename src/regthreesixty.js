@@ -42,7 +42,13 @@ angular.module('reg.threesixty', [])
 
         var adjustHeight = function () {
           if (loadedImages > 0) {
-            var h = frames[0][0].getElementsByTagName('img')[0].clientHeight;
+            var firstImg = frames[0][0].getElementsByTagName('img')[0];
+
+            var h = firstImg.clientHeight;
+
+            // Fix a ie11 bug, that sets the clientHeight occasionally to 1px
+            h = h !== 1 ? h : firstImg.naturalHeight;
+
             element.css('height', h + 'px');
           }
         };
@@ -72,8 +78,8 @@ angular.module('reg.threesixty', [])
 
         var adjustImgContainerSize = function (childImg) {
           var parent = angular.element(childImg).parent();
-          var elementW = element[0].offsetWidth;
           var imageW = childImg.naturalWidth;
+          var elementW = element[0].offsetWidth || imageW;
           var h = childImg.naturalHeight * ( elementW / imageW );
 
           angular.element(parent).css('height', h + 'px');
