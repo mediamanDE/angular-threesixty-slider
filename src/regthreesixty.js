@@ -7,18 +7,23 @@
  * # regThreesixty
  */
 angular.module('reg.threesixty', [])
-  .directive('threesixty', ['$document', '$window', function ($document, $window) {
+  .directive('threesixty', ['$document', '$window', '$timeout',function ($document, $window, $timeout) {
     return {
       template: '<div class="reg-threesixty"></div>',
       restrict: 'E',
-      replace: true,
-      scope: {
+      replace:true,
+      scope:{
         images: '=',
         reverse: '=',
         animateAfterLoading: '=',
-        speedMultiplier: '='
+        speedMultiplier: '=',
+        requiredMovementXinit: '=',
+        requiredMovementXcont: '=',
+        triggerMultiplier: '=',
+        scrollLock: '=',
+        scrollSwipe: '='
       },
-      link: function (scope, element, attrs) {
+      link: function(scope, element, attrs) {
 
         var img;
         var imgList = scope.images;
@@ -33,96 +38,114 @@ angular.module('reg.threesixty', [])
         var dragging;
         var pointerEndPosX;
         var pointerStartPosX;
+        var pointerEndPosY;
+        var pointerStartPosY;
         var pointerDistance;
         var monitorStartTime = 0;
         var monitorInt = 0;
-        var countOfLoadedImgInSets = [];
         var speedMultiplier = scope.speedMultiplier ? parseInt(scope.speedMultiplier) : 20;
         var ROTATION_EVENT = 'threesixty-animate';
+        var body = document.body;
+        var bodyClasses = body.classList;
+        var initialDrag = true;
+        var scrollY = 0;
+        var scrolling = false;
+        var scrollTimer;
 
-        var adjustHeight = function () {
-          if (loadedImages > 0) {
-            var firstImg = frames[0][0].getElementsByTagName('img')[0];
+        /**
+         * whether swiping through slides should be possible while scrolling
+         */
+        var scrollSwipe = scope.scrollSwipe === undefined ? true : Boolean(scope.scrollSwipe);
 
-            var h = firstImg.clientHeight;
+        /**
+         * required movement on the X axis to start swiping
+         */
+        var requiredMovementXinit = scope.requiredMovementXinit ? parseInt(scope.requiredMovementXinit) : 6;
 
-            // Fix a ie11 bug, that sets the clientHeight occasionally to 1px
-            h = h !== 1 ? h : firstImg.naturalHeight;
+        /**
+         * required movement on the X axis to consider it a swipe (after initial swipe)
+         */
+        var requiredMovementXcont = scope.requiredMovementXcont ? parseInt(scope.requiredMovementXcont) : 2;
 
-            element.css('height', h + 'px');
+        /**
+         * how much bigger movement on the X axis has to be than movement on the Y axis
+         */
+        var triggerMultiplier = scope.triggerMultiplier ? parseInt(scope.triggerMultiplier) : 3;
+
+        var adjustHeight = function(){
+          if( loadedImages > 0 ){
+            element.css( 'height' , (frames[0].offsetHeight || frames[0].naturalHeight) + 'px' );
           }
         };
 
-        angular.element($window).on('resize', adjustHeight);
+        angular.element($window).on('resize', adjustHeight );
 
-        var imageReadyOfSet = function (setIndex) {
-          if (typeof countOfLoadedImgInSets[setIndex] === 'undefined') {
-            countOfLoadedImgInSets[setIndex] = 1;
-          } else {
-            countOfLoadedImgInSets[setIndex] ++;
+        /**
+         * set scrolling variable to false when scrolling ended
+         */
+        var scrollEnd = function() {
+          scrolling = false;
+        };
+
+        /**
+         * update scrolling position that is used to lock scrolling while swiping
+         */
+        var updateOffset = function() {
+            if (!dragging || initialDrag) {
+                scrollY = $window.scrollY;
+                scrolling = true;
+
+                if(scrollTimer) {
+                  $timeout.cancel(scrollTimer);
+                }
+                scrollTimer = $timeout(scrollEnd, 300);
+            }
+        };
+
+        if (scope.scrollLock) {
+          $document.on('touchmove scroll', updateOffset);
+        }
+
+        var load360Images = function(){
+
+          for( var i = 1 ; i < imgList.length ; i++ ){
+            img = new Image();
+            img.onload = imageReady;
+            element.append( img );
+            frames[i] = img;
+            img.src = imgList[ i ];
           }
 
-          if (countOfLoadedImgInSets[setIndex] === imgList[setIndex].length) {
-            loadedImages++;
-            if (loadedImages === totalFrames) {
-              ready = true;
-              // start
-              endFrame = totalFrames;
+        };
 
-              if (scope.animateAfterLoading) {
-                refresh();
-              }
+        var imageReady = function( event ){
+          loadedImages ++;
+          if( loadedImages === totalFrames ){
+            ready = true;
+            // start
+            endFrame = totalFrames;
+
+            if (scope.animateAfterLoading) {
+              refresh();
             }
           }
         };
 
-        var adjustImgContainerSize = function (childImg) {
-          var parent = angular.element(childImg).parent();
-          var imageW = childImg.naturalWidth;
-          var elementW = element[0].offsetWidth || imageW;
-          var h = childImg.naturalHeight * ( elementW / imageW );
-
-          angular.element(parent).css('height', h + 'px');
-        };
-
-        var load360Images = function () {
-
-          for (var i = 1; i < imgList.length; i++) {
-            var imgContainer = angular.element('<div class="img-container-360 reg-threesixty-item"/>');
-            var imgSet = Array.isArray(imgList[i]) ? imgList[i] : [imgList[i]];
-            imgList[i] = imgSet;
-            imgSet.map(function (imgSrc) {
-              var img = new Image();
-
-              img.onload = (function () {
-                imageReadyOfSet(i, imgContainer);
-                return function(){
-                  adjustImgContainerSize(this);
-                };
-              })(i);
-
-              img.src = imgSrc;
-              imgContainer.append(img);
-            });
-
-            element.append(imgContainer);
-            frames[i] = imgContainer;
-          }
-        };
-
-        var firstImageReady = function () {
+        var firstImageReady = function(){
           // Remove previous images.
           element.find('img').remove();
-          loadedImages++;
+          loadedImages ++;
           var firstImage = frames[0];
-          angular.element(firstImage).addClass('current');
-          element.append(firstImage);
+          firstImage.className = 'current';
+          element.append( firstImage );
           element.removeClass('loading-first');
-          adjustHeight();
+          $timeout(function() {
+            adjustHeight();
+          }, 50);
           load360Images();
         };
 
-        var initImages = function () {
+        var initImages = function(){
 
           element.addClass('loading-first');
 
@@ -130,40 +153,54 @@ angular.module('reg.threesixty', [])
           totalFrames = imgList.length;
           loadedImages = 0;
 
-          if (totalFrames > 0) {
-            var imgContainer = angular.element('<div class="img-container-360 reg-threesixty-item"/>');
-            var imgSet = Array.isArray(imgList[0]) ? imgList[0] : [imgList[0]];
-            var loadedImagesForSetZero = 0;
-
-            imgSet.map(function (imgSrc) {
-              var img = new Image();
-
-              img.onload = function () {
-                loadedImagesForSetZero ++;
-
-                if (loadedImagesForSetZero === imgSet.length) {
-                  adjustImgContainerSize(this);
-                  firstImageReady();
-                }
-              };
-
-              img.src = imgSrc;
-              imgContainer.append(img);
-            });
-
-            frames.push(imgContainer);
+          if( totalFrames > 0 ){
+            // Load first image
+            img = new Image();
+            img.onload = firstImageReady;
+            img.src = imgList[ 0 ];
+            frames.push(img);
           }
 
         };
+
+        initImages();
+
+        // Update images on model change
+        // only if image list changes
+        scope.$watchCollection('images', function( newImageList, oldImageList){
+
+          slicedFrames += Math.abs(getNormalizedCurrentFrame());
+          if (slicedFrames >= newImageList.length - 1) {
+            slicedFrames -= newImageList.length;
+          }
+
+          var firstPart = newImageList.slice(0, slicedFrames);
+          var lastPart = newImageList.slice(slicedFrames);
+
+          imgList = lastPart.concat(firstPart);
+          currentFrame = 0;
+          if( newImageList.length != oldImageList.length ){
+            initImages();
+          }else{
+            for (var i = 0; i < oldImageList.length; i++) {
+              if( newImageList[ i ] !== oldImageList[ i ] ){
+                initImages();
+                break;
+              }
+            }
+          }
+
+        } );
+
 
         var refresh = function (animationSpeed) {
 
           if (ticker === 0) {
-            ticker = setInterval(render, animationSpeed || Math.round(1000 / 30));
+            ticker = setInterval(render, animationSpeed || Math.round(1000 / 30));
           }
         };
 
-        var getNormalizedCurrentFrame = function () {
+        var getNormalizedCurrentFrame = function() {
           var c = -Math.ceil(currentFrame % totalFrames);
           if (c < 0) {
             c += (totalFrames - 1);
@@ -171,17 +208,17 @@ angular.module('reg.threesixty', [])
           return c;
         };
 
-        var hidePreviousFrame = function () {
-          angular.element(frames[getNormalizedCurrentFrame()]).removeClass('current');
+        var hidePreviousFrame = function() {
+          frames[getNormalizedCurrentFrame()].className = '';
         };
 
-        var showCurrentFrame = function () {
-          angular.element(frames[getNormalizedCurrentFrame()]).addClass('current');
+        var showCurrentFrame = function() {
+          frames[getNormalizedCurrentFrame()].className = 'current';
         };
 
 
-        var render = function () {
-          if (frames.length > 0 && currentFrame !== endFrame) {
+        var render = function() {
+          if( frames.length >0 && currentFrame !== endFrame){
             var frameEasing = endFrame < currentFrame ?
               Math.floor((endFrame - currentFrame) * 0.1) :
               Math.ceil((endFrame - currentFrame) * 0.1);
@@ -196,96 +233,102 @@ angular.module('reg.threesixty', [])
 
         // Touch and Click events
 
-        var getPointerEvent = function (event) {
+        var getPointerEvent = function(event) {
           return event.targetTouches ? event.targetTouches[0] : event;
         };
 
         element.on('touchstart mousedown', mousedown);
 
-        function mousedown(event) {
-          event.preventDefault();
+        function mousedown (event) {
           pointerStartPosX = getPointerEvent(event).pageX;
+          pointerStartPosY = getPointerEvent(event).pageY;
           dragging = true;
 
-          $document.on('touchmove mousemove', mousemove);
-          $document.on('touchend mouseup', mouseup);
+          element.on('touchmove mousemove', mousemove);
+          element.on('touchend mouseup', mouseup);
         }
 
-        function trackPointer(event) {
-          if (ready && dragging) {
+        function trackPointer(event){
+          if (ready && dragging && (!scope.scrollLock || !scrolling)) {
 
-            pointerEndPosX = getPointerEvent(event).pageX;
-            if (monitorStartTime < new Date().getTime() - monitorInt) {
+            var pointerEvent = getPointerEvent(event);
+
+            pointerEndPosX = pointerEvent.pageX;
+            pointerEndPosY = pointerEvent.pageY;
+
+            if(monitorStartTime < new Date().getTime() - monitorInt) {
               var frameDiff = 0,
-                direction = scope.reverse ? -1 : 1;
+                direction = scope.reverse? -1 : 1 ;
 
               pointerDistance = pointerEndPosX - pointerStartPosX;
+              var xDistanceAbs = Math.abs(pointerDistance);
+              var pointerDistanceY = Math.abs(pointerEndPosY - pointerStartPosY);
 
-              if (pointerDistance > 0) {
-                frameDiff = Math.ceil((totalFrames - 1) * speedMultiplier * (pointerDistance / element[0].clientWidth));
-              } else {
-                frameDiff = Math.floor((totalFrames - 1) * speedMultiplier * (pointerDistance / element[0].clientWidth));
+              if (((!initialDrag && xDistanceAbs >= requiredMovementXcont) ||
+                      (initialDrag && xDistanceAbs >= requiredMovementXinit)) &&
+                  (pointerDistanceY * triggerMultiplier) < xDistanceAbs) {
+
+                  if (initialDrag) {
+                    initialDrag = false;
+
+                    if (scope.scrollLock) {
+                      body.style.top = -Math.abs(scrollY) + 'px';
+                      bodyClasses.add('no-scroll');
+                    }
+                  }
+
+                  var rawDiff = (totalFrames - 1) * speedMultiplier * (pointerDistance / element[0].clientWidth);
+
+                  if (pointerDistance > 0){
+                      frameDiff = Math.ceil(rawDiff);
+                  } else {
+                      frameDiff = Math.floor(rawDiff);
+                  }
+
+                  endFrame = currentFrame + (direction * frameDiff);
+
+                  refresh();
+              } else if (!scrollSwipe && (initialDrag && xDistanceAbs * triggerMultiplier < pointerDistanceY)) {
+                dragging = false;
               }
 
-              endFrame = currentFrame + (direction * frameDiff);
-
-              refresh();
               monitorStartTime = new Date().getTime();
-              pointerStartPosX = getPointerEvent(event).pageX;
+              pointerStartPosX = pointerEvent.pageX;
+              pointerStartPosY = pointerEvent.pageY;
             }
           }
         }
 
-        function mouseup(event) {
-          event.preventDefault();
+        function mouseup(event){
+          element.off('touchmove mousemove', mousemove);
+          element.off('touchend mouseup', mouseup);
+
+          if (scope.scrollLock) {
+            bodyClasses.remove('no-scroll');
+            if (!initialDrag) {
+              $window.scroll(0, Math.abs(parseInt(body.style.top)));
+              body.style.top = null;
+            }
+          }
+
           dragging = false;
-          $document.off('touchmove mousemove', mousemove);
-          $document.off('touchend mouseup', mouseup);
+          initialDrag = true;
         }
 
-        function mousemove(event) {
-          event.preventDefault();
+        function mousemove(event){
+          event.stopPropagation();
           trackPointer(event);
         }
 
-        initImages();
-
-        // Update images on model change
-        // only if image list changes
-        scope.$watchCollection('images', function (newImageList, oldImageList) {
-
-          slicedFrames += Math.abs(getNormalizedCurrentFrame());
-          if (slicedFrames >= newImageList.length - 1) {
-            slicedFrames -= newImageList.length;
-          }
-
-          var firstPart = newImageList.slice(0, slicedFrames);
-          var lastPart = newImageList.slice(slicedFrames);
-
-          imgList = lastPart.concat(firstPart);
-          currentFrame = 0;
-          if (newImageList.length != oldImageList.length) {
-            initImages();
-          } else {
-            for (var i = 0; i < oldImageList.length; i++) {
-              if (newImageList[i] !== oldImageList[i]) {
-                initImages();
-                break;
-              }
-            }
-          }
-
-        });
-
-        scope.$on(ROTATION_EVENT, function (event, animationSpeed) {
+        scope.$on(ROTATION_EVENT, function(event, animationSpeed) {
           endFrame = currentFrame + totalFrames;
           refresh(animationSpeed);
         });
 
-        scope.$on('$destroy', function () {
+        scope.$on( '$destroy', function() {
           $document.off('touchmove mousemove', mousemove);
           $document.off('touchend mouseup', mouseup);
-          angular.element($window).off('resize', adjustHeight);
+          angular.element($window).off('resize', adjustHeight );
         });
 
       }
