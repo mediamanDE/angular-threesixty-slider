@@ -9,11 +9,10 @@
   opacity: 0;
 }
 
-.reg-threesixty .reg-threesixty-item{
+.reg-threesixty canvas {
   width: 100%;
   height: auto;
   display: block;
-  visibility: hidden;
   position: absolute;
 
   -webkit-user-select: none;
@@ -21,21 +20,4 @@
   -moz-user-select: none;
   -o-user-select: none;
   user-select: none;
-}
-
-.reg-threesixty .reg-threesixty-item img {
-  position: absolute;
-  width: 100%;
-  left: 0;
-  top: 0;
-
-  -webkit-user-select: none;
-  -khtml-user-select: none;
-  -moz-user-select: none;
-  -o-user-select: none;
-  user-select: none;
-}
-
-.reg-threesixty .reg-threesixty-item.current{
-  visibility: visible;
 }
