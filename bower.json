@@ -1,6 +1,6 @@
 {
   "name": "angular-threesixty-slider",
-	"version": "1.0.7",
+	"version": "1.0.8",
     "main": "src/regthreesixty.js",
 	"authors": [
 		"Rodrigo Saiz <rodrigo@regoluna.com>"
