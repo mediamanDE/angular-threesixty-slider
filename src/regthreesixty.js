@@ -320,8 +320,13 @@ angular.module('reg.threesixty', [])
           trackPointer(event);
         }
 
-        scope.$on(ROTATION_EVENT, function(event, animationSpeed) {
-          endFrame = currentFrame + totalFrames;
+        scope.$on(ROTATION_EVENT, function(event, animationSpeed, amount) {
+          if (amount) {
+            endFrame = currentFrame + amount;
+          } else {
+            endFrame = currentFrame + totalFrames;
+          }
+
           refresh(animationSpeed);
         });
 
