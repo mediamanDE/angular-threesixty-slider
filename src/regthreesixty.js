@@ -7,12 +7,12 @@
  * # regThreesixty
  */
 angular.module('reg.threesixty', [])
-  .directive('threesixty', ['$document', '$window', '$timeout',function ($document, $window, $timeout) {
+  .directive('threesixty', ['$document', '$window', '$timeout', function ($document, $window, $timeout) {
     return {
       template: '<div class="reg-threesixty"></div>',
       restrict: 'E',
-      replace:true,
-      scope:{
+      replace: true,
+      scope: {
         images: '=',
         reverse: '=',
         animateAfterLoading: '=',
@@ -23,8 +23,11 @@ angular.module('reg.threesixty', [])
         scrollLock: '=',
         scrollSwipe: '='
       },
-      link: function(scope, element, attrs) {
-
+      link: function (scope, element, attrs) {
+        var EVENTS = {
+          MOVED: 'threesixty-moved',
+          ROTATION: 'threesixty-animate'
+        };
         var img;
         var imgList = scope.images;
         var slicedFrames = 0;
@@ -44,7 +47,6 @@ angular.module('reg.threesixty', [])
         var monitorStartTime = 0;
         var monitorInt = 0;
         var speedMultiplier = scope.speedMultiplier ? parseInt(scope.speedMultiplier) : 20;
-        var ROTATION_EVENT = 'threesixty-animate';
         var body = document.body;
         var bodyClasses = body.classList;
         var initialDrag = true;
@@ -72,55 +74,55 @@ angular.module('reg.threesixty', [])
          */
         var triggerMultiplier = scope.triggerMultiplier ? parseInt(scope.triggerMultiplier) : 3;
 
-        var adjustHeight = function(){
-          if( loadedImages > 0 ){
-            element.css( 'height' , (frames[0].offsetHeight || frames[0].naturalHeight) + 'px' );
+        var adjustHeight = function () {
+          if (loadedImages > 0) {
+            element.css('height', (frames[0].offsetHeight || frames[0].naturalHeight) + 'px');
           }
         };
 
-        angular.element($window).on('resize', adjustHeight );
+        angular.element($window).on('resize', adjustHeight);
 
         /**
          * set scrolling variable to false when scrolling ended
          */
-        var scrollEnd = function() {
+        var scrollEnd = function () {
           scrolling = false;
         };
 
         /**
          * update scrolling position that is used to lock scrolling while swiping
          */
-        var updateOffset = function() {
-            if (!dragging || initialDrag) {
-                scrollY = $window.scrollY;
-                scrolling = true;
+        var updateOffset = function () {
+          if (!dragging || initialDrag) {
+            scrollY = $window.scrollY;
+            scrolling = true;
 
-                if(scrollTimer) {
-                  $timeout.cancel(scrollTimer);
-                }
-                scrollTimer = $timeout(scrollEnd, 300);
+            if (scrollTimer) {
+              $timeout.cancel(scrollTimer);
             }
+            scrollTimer = $timeout(scrollEnd, 300);
+          }
         };
 
         if (scope.scrollLock) {
           $document.on('touchmove scroll', updateOffset);
         }
 
-        var load360Images = function(){
+        var load360Images = function () {
 
-          for( var i = 1 ; i < imgList.length ; i++ ){
+          for (var i = 1; i < imgList.length; i++) {
             img = new Image();
             img.onload = imageReady;
-            element.append( img );
+            element.append(img);
             frames[i] = img;
-            img.src = imgList[ i ];
+            img.src = imgList[i];
           }
 
         };
 
-        var imageReady = function( event ){
-          loadedImages ++;
-          if( loadedImages === totalFrames ){
+        var imageReady = function (event) {
+          loadedImages++;
+          if (loadedImages === totalFrames) {
             ready = true;
             // start
             endFrame = totalFrames;
@@ -131,21 +133,21 @@ angular.module('reg.threesixty', [])
           }
         };
 
-        var firstImageReady = function(){
+        var firstImageReady = function () {
           // Remove previous images.
           element.find('img').remove();
-          loadedImages ++;
+          loadedImages++;
           var firstImage = frames[0];
           firstImage.className = 'current';
-          element.append( firstImage );
+          element.append(firstImage);
           element.removeClass('loading-first');
-          $timeout(function() {
+          $timeout(function () {
             adjustHeight();
           }, 50);
           load360Images();
         };
 
-        var initImages = function(){
+        var initImages = function () {
 
           element.addClass('loading-first');
 
@@ -153,11 +155,11 @@ angular.module('reg.threesixty', [])
           totalFrames = imgList.length;
           loadedImages = 0;
 
-          if( totalFrames > 0 ){
+          if (totalFrames > 0) {
             // Load first image
             img = new Image();
             img.onload = firstImageReady;
-            img.src = imgList[ 0 ];
+            img.src = imgList[0];
             frames.push(img);
           }
 
@@ -167,7 +169,7 @@ angular.module('reg.threesixty', [])
 
         // Update images on model change
         // only if image list changes
-        scope.$watchCollection('images', function( newImageList, oldImageList){
+        scope.$watchCollection('images', function (newImageList, oldImageList) {
 
           slicedFrames += Math.abs(getNormalizedCurrentFrame());
           if (slicedFrames >= newImageList.length - 1) {
@@ -179,28 +181,28 @@ angular.module('reg.threesixty', [])
 
           imgList = lastPart.concat(firstPart);
           currentFrame = 0;
-          if( newImageList.length != oldImageList.length ){
+          if (newImageList.length != oldImageList.length) {
             initImages();
-          }else{
+          } else {
             for (var i = 0; i < oldImageList.length; i++) {
-              if( newImageList[ i ] !== oldImageList[ i ] ){
+              if (newImageList[i] !== oldImageList[i]) {
                 initImages();
                 break;
               }
             }
           }
 
-        } );
+        });
 
 
         var refresh = function (animationSpeed) {
 
           if (ticker === 0) {
-            ticker = setInterval(render, animationSpeed || Math.round(1000 / 30));
+            ticker = setInterval(render, animationSpeed || Math.round(1000 / 30));
           }
         };
 
-        var getNormalizedCurrentFrame = function() {
+        var getNormalizedCurrentFrame = function () {
           var c = -Math.ceil(currentFrame % totalFrames);
           if (c < 0) {
             c += (totalFrames - 1);
@@ -208,17 +210,17 @@ angular.module('reg.threesixty', [])
           return c;
         };
 
-        var hidePreviousFrame = function() {
+        var hidePreviousFrame = function () {
           frames[getNormalizedCurrentFrame()].className = '';
         };
 
-        var showCurrentFrame = function() {
+        var showCurrentFrame = function () {
           frames[getNormalizedCurrentFrame()].className = 'current';
         };
 
 
-        var render = function() {
-          if( frames.length >0 && currentFrame !== endFrame){
+        var render = function () {
+          if (frames.length > 0 && currentFrame !== endFrame) {
             var frameEasing = endFrame < currentFrame ?
               Math.floor((endFrame - currentFrame) * 0.1) :
               Math.ceil((endFrame - currentFrame) * 0.1);
@@ -233,22 +235,23 @@ angular.module('reg.threesixty', [])
 
         // Touch and Click events
 
-        var getPointerEvent = function(event) {
+        var getPointerEvent = function (event) {
           return event.targetTouches ? event.targetTouches[0] : event;
         };
 
         element.on('touchstart mousedown', mousedown);
 
-        function mousedown (event) {
+        function mousedown(event) {
           pointerStartPosX = getPointerEvent(event).pageX;
           pointerStartPosY = getPointerEvent(event).pageY;
           dragging = true;
+          fireOnTouch();
 
           element.on('touchmove mousemove', mousemove);
           element.on('touchend mouseup', mouseup);
         }
 
-        function trackPointer(event){
+        function trackPointer(event) {
           if (ready && dragging && (!scope.scrollLock || !scrolling)) {
 
             var pointerEvent = getPointerEvent(event);
@@ -256,38 +259,38 @@ angular.module('reg.threesixty', [])
             pointerEndPosX = pointerEvent.pageX;
             pointerEndPosY = pointerEvent.pageY;
 
-            if(monitorStartTime < new Date().getTime() - monitorInt) {
+            if (monitorStartTime < new Date().getTime() - monitorInt) {
               var frameDiff = 0,
-                direction = scope.reverse? -1 : 1 ;
+                direction = scope.reverse ? -1 : 1;
 
               pointerDistance = pointerEndPosX - pointerStartPosX;
               var xDistanceAbs = Math.abs(pointerDistance);
               var pointerDistanceY = Math.abs(pointerEndPosY - pointerStartPosY);
 
               if (((!initialDrag && xDistanceAbs >= requiredMovementXcont) ||
-                      (initialDrag && xDistanceAbs >= requiredMovementXinit)) &&
-                  (pointerDistanceY * triggerMultiplier) < xDistanceAbs) {
+                  (initialDrag && xDistanceAbs >= requiredMovementXinit)) &&
+                (pointerDistanceY * triggerMultiplier) < xDistanceAbs) {
 
-                  if (initialDrag) {
-                    initialDrag = false;
+                if (initialDrag) {
+                  initialDrag = false;
 
-                    if (scope.scrollLock) {
-                      body.style.top = -Math.abs(scrollY) + 'px';
-                      bodyClasses.add('no-scroll');
-                    }
+                  if (scope.scrollLock) {
+                    body.style.top = -Math.abs(scrollY) + 'px';
+                    bodyClasses.add('no-scroll');
                   }
+                }
 
-                  var rawDiff = (totalFrames - 1) * speedMultiplier * (pointerDistance / element[0].clientWidth);
+                var rawDiff = (totalFrames - 1) * speedMultiplier * (pointerDistance / element[0].clientWidth);
 
-                  if (pointerDistance > 0){
-                      frameDiff = Math.ceil(rawDiff);
-                  } else {
-                      frameDiff = Math.floor(rawDiff);
-                  }
+                if (pointerDistance > 0) {
+                  frameDiff = Math.ceil(rawDiff);
+                } else {
+                  frameDiff = Math.floor(rawDiff);
+                }
 
-                  endFrame = currentFrame + (direction * frameDiff);
+                endFrame = currentFrame + (direction * frameDiff);
 
-                  refresh();
+                refresh();
               } else if (!scrollSwipe && (initialDrag && xDistanceAbs * triggerMultiplier < pointerDistanceY)) {
                 dragging = false;
               }
@@ -299,7 +302,7 @@ angular.module('reg.threesixty', [])
           }
         }
 
-        function mouseup(event){
+        function mouseup(event) {
           element.off('touchmove mousemove', mousemove);
           element.off('touchend mouseup', mouseup);
 
@@ -315,25 +318,33 @@ angular.module('reg.threesixty', [])
           initialDrag = true;
         }
 
-        function mousemove(event){
+        function mousemove(event) {
           event.stopPropagation();
           trackPointer(event);
         }
 
-        scope.$on(ROTATION_EVENT, function(event, animationSpeed, amount) {
+        function fireOnTouch() {
+          scope.$emit(EVENTS.MOVED, true)
+        }
+
+        scope.$on(EVENTS.ROTATION, function (event, animationSpeed, shouldFireOnTouchEvent, amount) {
           if (amount) {
             endFrame = currentFrame + amount;
           } else {
             endFrame = currentFrame + totalFrames;
           }
 
+          if (shouldFireOnTouchEvent) {
+            fireOnTouch();
+          }
+
           refresh(animationSpeed);
         });
 
-        scope.$on( '$destroy', function() {
+        scope.$on('$destroy', function () {
           $document.off('touchmove mousemove', mousemove);
           $document.off('touchend mouseup', mouseup);
-          angular.element($window).off('resize', adjustHeight );
+          angular.element($window).off('resize', adjustHeight);
         });
 
       }
